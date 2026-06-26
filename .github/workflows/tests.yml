@@ -1,0 +1,50 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright (c) 2026 SUSE Software Solutions
+#
+# Authors: Daniel Wagner <dwagner@suse.de>
+
+name: Tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  testsuite:
+    runs-on: arc-vm-nvmetcli-cph
+    timeout-minutes: 1200
+
+    strategy:
+      fail-fast: false
+      matrix:
+        container:
+          - ghcr.io/linux-nvme/nvmetcli-debian-containerdisk:latest
+          - ghcr.io/linux-nvme/nvmetcli-fedora-containerdisk:latest
+          - ghcr.io/linux-nvme/nvmetcli-tumbleweed-containerdisk:latest
+
+    name: >
+      testsuite (${{ matrix.container }})
+
+    steps:
+      - name: Checkout blktests-ci
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: linux-blktests/blktests-ci
+
+      - name: Run in VM
+        uses: ./.github/actions/kubevirt-action
+        with:
+          container_disk_image: ${{ matrix.container }}
+          run_cmds: |
+            git init nvmetcli
+            cd nvmetcli
+            git remote add origin https://github.com/${{ github.repository }}
+            git fetch --depth=1 origin ${{ github.event.pull_request.head.sha || github.sha }}
+            git checkout -b ci-run FETCH_HEAD
+
+            sudo modprobe nvmet
+            sudo make test

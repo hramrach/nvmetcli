@@ -1,0 +1,41 @@
+---
+# SPDX-License-Identifier: Apache-2.0
+#
+# Copyright (c) 2026 SUSE Software Solutions
+#
+# Authors: Daniel Wagner <dwagner@suse.de>
+
+name: Python Sanity
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pylint
+
+      - name: flake8
+        run: flake8 nvmet/ nvmetcli
+
+      - name: pylint
+        run: pylint --disable=all --enable=E nvmet/ nvmetcli
+
+      - name: Verify package installs
+        run: pip install .
